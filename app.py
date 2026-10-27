@@ -792,7 +792,12 @@ elif page.startswith("🎯"):
         with c2:
             st.plotly_chart(V.box(uips_df, "UIPS", title="UIPS Box Plot"), use_container_width=True)
 
-        full_uips = uips_df.merge(df[["District_Label", "Total_Population", "Literacy_Gap"]], on="District_Label", how="left")
+        cols_needed = ["Total_Population", "Literacy_Gap"]
+        missing_in_uips = [c for c in cols_needed if c not in uips_df.columns]
+        if missing_in_uips:
+            full_uips = uips_df.merge(df[["District_Label"] + missing_in_uips], on="District_Label", how="left")
+        else:
+            full_uips = uips_df.copy()
         s1, s2 = st.columns(2)
         with s1:
             st.plotly_chart(V.scatter(full_uips, "Total_Population", "UIPS", title="Total Population vs UIPS"), use_container_width=True)
