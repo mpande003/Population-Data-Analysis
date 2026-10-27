@@ -1,0 +1,9 @@
+__pycache__/
+.ipynb_checkpoints/
+.venv/
+venv/
+*.pyc
+data/*
+!data/.gitkeep
+!data/census_2011_districts_final.parquet
+.streamlit/secrets.toml
