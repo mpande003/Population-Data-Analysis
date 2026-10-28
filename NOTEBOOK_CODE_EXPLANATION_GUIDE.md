@@ -393,3 +393,4 @@ print("ALL SELF-CHECKS PASSED: 0 ERRORS!")
 | **Min-Max Normalization** | $\text{Norm}(x) = \frac{x - x_{\min}}{x_{\max} - x_{\min}}$ | Rescales disparate indicators into $[0, 1]$ for composite UIPS. |
 | **Macro F1-Score** | $\frac{1}{K} \sum_{k=1}^K \frac{2 \cdot P_k \cdot R_k}{P_k + R_k}$ | Evaluates model performance giving equal weight to minority classes. |
 | **Soft-Voting Ensemble** | $\hat{y} = \arg\max_k \left( \frac{P_{\text{RF}}(k) + P_{\text{GB}}(k)}{2} \right)$ | Combines class probabilities to optimize prediction confidence. |
+
