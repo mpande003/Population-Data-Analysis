@@ -321,7 +321,7 @@ if page.startswith("🏠"):
         </div>
         <div class="module-card" style="border-left-color: #06B6D4;">
             <h4>Module B: Education & Social Development</h4>
-            <p>Explores literacy rates, sex ratios, and marginalized community representations (SC & ST). Features Pearson/Spearman correlation matrices, two-group hypothesis testing (Welch t / Mann-Whitney), and one-way ANOVA across states.</p>
+            <p>Explores literacy rates, sex ratios, and marginalized community representations (SC & ST). Features Pearson/Spearman correlations, two-sample t-test / Welch's t-test, Z-tests, one-way and two-way ANOVA, and Chi-square tests of independence (strictly syllabus-approved).</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -472,8 +472,8 @@ elif page.startswith("🎓"):
         "⚖️ Sex Ratio & SC / ST",
         "🔍 Bivariate Explorer",
         "🧬 Correlation Heatmaps",
-        "🧪 Hypothesis Testing",
-        "📐 One-Way ANOVA across States",
+        "🧪 T-Tests & Z-Tests (Practical 5.1)",
+        "📐 ANOVA & Chi-Square (Practical 5.2)",
     ])
 
     with tab1:
@@ -518,52 +518,181 @@ elif page.startswith("🎓"):
         st.caption("Notice the strong negative correlation between Child Share and Literacy Rate (partly mechanical when using the crude denominator).")
 
     with tab5:
-        st.markdown("#### Research Hypothesis")
+        st.markdown("### 🧪 Syllabus-Approved T-Tests & Z-Tests (Practical 5 — Notebook 1)")
+        st.caption("Only Z-tests and t-tests specified in the practical syllabus are performed. Non-parametric alternatives (Mann-Whitney U) are strictly excluded.")
+
+        # Sub-section 1: Two-Sample t-test on SC+ST vs Literacy
+        st.markdown("#### 1. Independent Two-Sample T-Test (SC+ST Share vs Literacy Rate)")
         st.markdown(
-            "**Research Question:** Do districts with an above-median SC+ST population share exhibit significantly different literacy rates compared to other districts?  \n"
-            "**H₀:** Literacy rate distributions are equal between the two groups.  \n"
-            "**H₁:** Literacy rate distributions differ significantly (two-sided, $\\alpha = 0.05$)."
+            "**Purpose:** Test whether mean district literacy rate differs significantly between districts with an above-median SC+ST population share and those at or below the median.  \n"
+            "**Null Hypothesis ($H_0$):** $\\mu_{\\text{above}} = \\mu_{\\text{below}}$ (Group mean literacy rates are equal)  \n"
+            "**Alternative Hypothesis ($H_1$):** $\\mu_{\\text{above}} \\ne \\mu_{\\text{below}}$ (Group mean literacy rates differ, two-sided, $\\alpha = 0.05$)"
         )
         try:
             h_res = B.default_hypothesis(d)
-            col_h1, col_h2, col_h3 = st.columns(3)
-            col_h1.metric("Selected Test", h_res["test"])
-            col_h2.metric("Test Statistic", f"{h_res['statistic']:.2f}")
-            col_h3.metric("p-value", f"{h_res['p_value']:.4e}", delta="Significant" if h_res["p_value"] < 0.05 else "Not Significant")
+            col_h1, col_h2, col_h3, col_h4 = st.columns(4)
+            col_h1.metric("Applied Test", h_res["test"])
+            col_h2.metric("t-Statistic", f"{h_res['statistic']:.3f}")
+            col_h3.metric("p-value", f"{h_res['p_value']:.4e}", delta="Reject H0" if h_res["p_value"] < 0.05 else "Fail to Reject")
+            col_h4.metric("Cohen's d (Effect)", f"{h_res['effect_size']:.3f}")
+
+            # Group comparison metrics
+            gm1, gm2, gm3 = st.columns(3)
+            gm1.markdown(f"**Group 1 ({h_res['groups'][0]}):** Mean = `{h_res['means'][0]:.2f}%`, Std = `{h_res['stds'][0]:.2f}`, n = `{h_res['n'][0]}`")
+            gm2.markdown(f"**Group 2 ({h_res['groups'][1]}):** Mean = `{h_res['means'][1]:.2f}%`, Std = `{h_res['stds'][1]:.2f}`, n = `{h_res['n'][1]}`")
+            gm3.markdown(f"**Mean Difference:** `{h_res['mean_difference']:.2f}%` (95% CI: `[{h_res['ci_95'][0]:.2f}%, {h_res['ci_95'][1]:.2f}%]`)")
+
+            # Assumption verification display
+            st.markdown("##### Assumption Verification & Limitation Notes:")
+            sh_a, sh_b = h_res["normality_p"]
+            st.markdown(f"- **Normality (Shapiro-Wilk):** Group 1 p = `{sh_a:.4e}`, Group 2 p = `{sh_b:.4e}`")
+            st.markdown(f"- **Homogeneity of Variance (Levene):** p = `{h_res['levene_p']:.4e}` (Unequal variance handled via Welch's Satterthwaite approximation)")
+
+            if h_res.get("assumption_warnings"):
+                for w in h_res["assumption_warnings"]:
+                    st.warning(f"⚠️ {w}")
 
             if h_res["p_value"] < 0.05:
-                st.success(f"**Decision:** {h_res['decision'].upper()} at α = 0.05. {h_res['interpretation']}")
+                st.success(f"**Statistical Decision:** {h_res['decision'].upper()} at α = 0.05. {h_res['interpretation']}")
             else:
-                st.info(f"**Decision:** {h_res['decision'].upper()} at α = 0.05. {h_res['interpretation']}")
+                st.info(f"**Statistical Decision:** {h_res['decision'].upper()} at α = 0.05. {h_res['interpretation']}")
 
-            st.json({
-                "Sample Sizes (n1, n2)": h_res["n"],
-                "Group Medians (%)": [round(m, 2) for m in h_res["medians"]],
-                "Effect Size Name": h_res["effect_size_name"],
-                "Effect Size Value": round(h_res["effect_size"], 4),
-            })
+            st.caption("Critical Note: Rejecting H0 indicates a statistical association between marginalized community concentration and district literacy, NOT causation. It does not prove classroom deficits.")
         except Exception as e:
-            st.error(f"Cannot perform test on current selection: {e}")
+            st.error(f"Cannot perform two-sample t-test on current selection: {e}")
+
+        st.markdown("---")
+        # Sub-section 2: One-Sample T-test and Z-test against National Benchmark
+        st.markdown("#### 2. One-Sample Hypothesis Tests against Policy Benchmark (T-test & Z-test)")
+        st.markdown("Evaluate whether sample district indicators differ significantly from a known national benchmark $\\mu_0$.")
+
+        t_cfg1, t_cfg2, t_cfg3 = st.columns(3)
+        bench_var = t_cfg1.selectbox("Variable to Test", ["Literacy_Rate", "Sex_Ratio", "Workforce_Participation_Rate"], key="bench_var")
+        bench_val = t_cfg2.number_input("Benchmark Value (mu_0)", value=65.0 if bench_var == "Literacy_Rate" else (950.0 if bench_var == "Sex_Ratio" else 40.0), key="bench_val")
+        test_mode = t_cfg3.radio("Test Framework", ["One-Sample T-Test", "One-Sample Z-Test (Large Sample N>=30)"], horizontal=True)
+
+        try:
+            if "Z-Test" in test_mode:
+                z_res = ST.one_sample_z_test(d, bench_var, float(bench_val))
+                zc1, zc2, zc3 = st.columns(3)
+                zc1.metric("Sample Mean", f"{z_res['sample_mean']:.2f}")
+                zc2.metric("Z-Statistic", f"{z_res['statistic']:.3f}")
+                zc3.metric("p-value", f"{z_res['p_value']:.4e}", delta="Reject H0" if z_res["p_value"] < 0.05 else "Fail to Reject")
+                st.info(z_res["interpretation"])
+            else:
+                t1_res = ST.one_sample_t_test(d, bench_var, float(bench_val))
+                tc1, tc2, tc3, tc4 = st.columns(4)
+                tc1.metric("Sample Mean", f"{t1_res['sample_mean']:.2f}")
+                tc2.metric("t-Statistic", f"{t1_res['statistic']:.3f}")
+                tc3.metric("p-value", f"{t1_res['p_value']:.4e}", delta="Reject H0" if t1_res["p_value"] < 0.05 else "Fail to Reject")
+                tc4.metric("Cohen's d", f"{t1_res['effect_size']:.3f}")
+                if t1_res.get("assumption_warnings"):
+                    for w in t1_res["assumption_warnings"]:
+                        st.warning(f"⚠️ {w}")
+                st.info(t1_res["interpretation"])
+        except Exception as e:
+            st.error(f"Error performing one-sample test: {e}")
 
     with tab6:
-        st.markdown("#### One-Way ANOVA across States")
-        st.markdown("Compares district literacy rates across states with a sufficient sample size (min $k$ districts per state). Assumptions are checked automatically.")
-        min_k = st.slider("Minimum districts per state to include", 3, 10, 5)
+        st.markdown("### 📐 Syllabus-Approved ANOVA & Chi-Square Tests (Practical 5 — Notebook 2)")
+        st.caption("Only One-Way ANOVA, Two-Way ANOVA, and Chi-Square tests are performed. Kruskal-Wallis is strictly removed per syllabus requirements.")
+
+        # Section 1: One-Way ANOVA across States
+        st.markdown("#### 1. One-Way ANOVA across States")
+        st.markdown(
+            "**Purpose:** Test whether mean district literacy rates differ across states.  \n"
+            "**Null Hypothesis ($H_0$):** $\\mu_1 = \\mu_2 = \\dots = \\mu_k$ (All included state means are equal)  \n"
+            "**Alternative Hypothesis ($H_1$):** At least one state mean differs ($\\alpha = 0.05$)"
+        )
+        min_k = st.slider("Minimum districts per state to include", 3, 10, 5, key="anova_k")
         try:
             a_res = B.state_anova(d, min_k)
-            c1, c2, c3 = st.columns(3)
-            c1.metric("States Included", a_res["groups_used"])
-            c2.metric("Districts Evaluated", a_res["n"])
-            c3.metric("Primary Recommended Test", a_res["primary_test"])
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("States Evaluated", a_res["groups_used"])
+            c2.metric("Districts (N)", a_res["n"])
+            c3.metric("Classic F-Statistic", f"{a_res['classic_F']:.3f}")
+            c4.metric("Classic p-value", f"{a_res['classic_p']:.4e}")
 
-            st.markdown(f"**Primary Test Result:** `{a_res['primary_test']}` — p-value: **{a_res['primary_p']:.4e}**")
-            st.caption(f"Residual Shapiro-Wilk Normality p: {a_res['residual_shapiro_p']:.4e} | Levene Variance Homogeneity p: {a_res['levene_p']:.4e}")
-            st.warning(a_res["independence_note"])
+            wc1, wc2, wc3 = st.columns(3)
+            wc1.metric("Welch F-Statistic", f"{a_res['welch_F']:.3f}")
+            wc2.metric("Welch p-value", f"{a_res['welch_p']:.4e}")
+            wc3.metric("Effect Size (Eta-Squared)", f"{a_res['eta_squared']:.3f}")
 
-            with st.expander("Full ANOVA & Non-Parametric Metric Table"):
+            st.markdown("##### Assumption Checks & Reporting:")
+            st.markdown(f"- **Residual Normality (Shapiro-Wilk):** p = `{a_res['residual_shapiro_p']:.4e}`")
+            st.markdown(f"- **Equal Variances (Levene Test):** p = `{a_res['levene_p']:.4e}`")
+
+            if a_res.get("assumption_warnings"):
+                for w in a_res["assumption_warnings"]:
+                    st.warning(f"⚠️ {w}")
+
+            st.markdown(f"**Primary Test Selected:** `{a_res['primary_test']}` — Decision: **{a_res['decision'].upper()}**")
+            st.info(a_res["interpretation"])
+            st.caption(f"Spatial nestedness note: {a_res['independence_note']}")
+
+            with st.expander("Full ANOVA Metrics Table (Syllabus Compliant)"):
                 st.json({k: v for k, v in a_res.items() if k not in ("interpretation", "independence_note")})
         except Exception as e:
             st.error(f"ANOVA calculation error: {e}")
+
+        st.markdown("---")
+        # Section 2: Two-Way ANOVA (Factorial Interaction)
+        st.markdown("#### 2. Two-Way ANOVA: SC+ST Share Group and Workforce Tier on Literacy")
+        st.markdown(
+            "**Purpose:** Evaluate the main effects of SC+ST Concentration Tier and Workforce Participation Tier, along with their interaction effect, on District Literacy Rate.  \n"
+            "**Hypotheses:**  \n"
+            "- $H_{0,A}$: No main effect of SC+ST concentration tier.  \n"
+            "- $H_{0,B}$: No main effect of Workforce participation tier.  \n"
+            "- $H_{0,AB}$: No interaction effect between SC+ST concentration and workforce participation."
+        )
+        try:
+            aov2 = B.two_way_anova_literacy(d)
+            st.dataframe(aov2["anova_table"].style.format({
+                "Sum_of_Squares": "{:,.2f}",
+                "df": "{:.0f}",
+                "F_statistic": "{:.3f}",
+                "p_value": "{:.4e}",
+                "partial_eta_squared": "{:.4f}",
+            }), hide_index=True, use_container_width=True)
+
+            if aov2.get("assumption_warnings"):
+                for w in aov2["assumption_warnings"]:
+                    st.warning(f"⚠️ {w}")
+            st.info(aov2["interpretation"])
+        except Exception as e:
+            st.error(f"Two-Way ANOVA calculation error: {e}")
+
+        st.markdown("---")
+        # Section 3: Chi-Square Test of Independence
+        st.markdown("#### 3. Chi-Square Test of Independence (Literacy Tier vs SC+ST Concentration Group)")
+        st.markdown(
+            "**Purpose:** Test whether district literacy level tier (Low <60%, Medium 60-75%, High ≥75%) is statistically independent of SC+ST concentration (Above-median vs At/below-median).  \n"
+            "**Null Hypothesis ($H_0$):** Literacy Tier and SC+ST Concentration Group are independent.  \n"
+            "**Alternative Hypothesis ($H_1$):** Literacy Tier and SC+ST Concentration Group are dependent (statistically associated, $\\alpha = 0.05$)."
+        )
+        try:
+            chi_res = B.chi_square_literacy_sc_st(d)
+            chi_c1, chi_c2, chi_c3, chi_c4 = st.columns(4)
+            chi_c1.metric("Chi-Square (chi2)", f"{chi_res['statistic']:.3f}")
+            chi_c2.metric("Degrees of Freedom", chi_res["df"])
+            chi_c3.metric("p-value", f"{chi_res['p_value']:.4e}", delta="Reject H0" if chi_res["p_value"] < 0.05 else "Fail to Reject")
+            chi_c4.metric("Cramer's V (Effect)", f"{chi_res['cramers_v']:.3f}")
+
+            st.markdown("##### Observed Contingency Table:")
+            st.dataframe(chi_res["contingency_table"], use_container_width=True)
+
+            st.markdown("##### Expected Frequencies (Cochran's Assumption Check):")
+            st.dataframe(chi_res["expected_frequencies"].style.format("{:.2f}"), use_container_width=True)
+
+            if chi_res.get("assumption_warnings"):
+                for w in chi_res["assumption_warnings"]:
+                    st.warning(f"⚠️ {w}")
+            else:
+                st.caption("✅ Cochran's condition satisfied: all expected cell counts are >= 5.")
+
+            st.success(f"**Decision:** {chi_res['decision'].upper()} at α = 0.05. {chi_res['interpretation']}")
+        except Exception as e:
+            st.error(f"Chi-square test error: {e}")
 
 
 # -----------------------------------------------------------------------------
@@ -959,7 +1088,7 @@ else:
         "  - *Effective Basis:* Official census definition for age 7+: Literacy Rate = (Literate Total / (Total Population - Child Population)) * 100.\n\n"
         "### 3. Module Methodologies\n"
         "- **Module A:** Population descriptive summary, skewness evaluation, top-10 concentration metrics.\n"
-        "- **Module B:** Bivariate correlation (Pearson & Spearman), two-group Welch t / Mann-Whitney test (median split on SC+ST share), and one-way ANOVA across states with Levene variance homogeneity and Shapiro-Wilk residual checks.\n"
+        "- **Module B:** Bivariate correlation (Pearson & Spearman), Two-Sample t-test / Welch's t-test (SC+ST share median split), One-Sample t/Z-tests against benchmarks, One-Way ANOVA across states, Two-Way ANOVA (SC+ST tier and workforce tier interaction), and Chi-Square test of independence (Literacy tier vs SC+ST tier). All tests strictly adhere to the practical syllabus, displaying formal hypotheses, assumption checks (Shapiro-Wilk, Levene, Cochran's condition), and limitation warnings without substituting unapproved non-parametric tests.\n"
         "- **Module C:** Random Forest Classifier predicting Low (<60%), Medium (60-75%), and High (≥75%) literacy tiers using only non-literacy demographic features. Evaluated against a Dummy Majority Baseline.\n"
         "- **Module D:** Urban Infrastructure Planning Priority Score:\n\n"
         "  $$\\text{UIPS} = 100 \\times (0.35 P + 0.25 C + 0.25 L + 0.15 W)$$\n\n"

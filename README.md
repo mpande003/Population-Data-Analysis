@@ -26,6 +26,7 @@ Data source (only): https://huggingface.co/datasets/indiaset/census-2011 (640 di
 
 ## Methodology (summary)
 - Child population = age 0-6; sex ratio = females per 1000 males; workforce participation = workers / total population.
+- Statistical tests: Strictly conforms to SI Lab Practical 5 (Notebooks 1 & 2): Z-tests, Student's/Welch's Two-Sample t-tests, One-Sample t-tests, One-Way ANOVA, Two-Way ANOVA, and Chi-Square tests of independence. Unapproved non-parametric tests (Mann-Whitney U, Kruskal-Wallis) are excluded; assumption violations are explicitly reported with limitations rather than test substitutions.
 - The loader code tests which denominator `literacy_rate` uses. In the repository preview it matches `literate_total / pop_total` (a crude all-ages rate). Child share therefore mechanically relates to literacy. The sidebar/`literacy_basis="effective"` option gives the age 7+ rate.
 - Module C: Low < 60, Medium 60 to < 75, High >= 75 (project thresholds); features are sex ratio, child share, workforce participation, SC share, ST share; literacy variables/identifiers excluded; majority-class baseline; 80:20 stratified split; seed 42.
 - Module D: min-max normalisation, UIPS = 100 x (0.35P + 0.25C + 0.25L + 0.15W); omitted components are removed and weights rescaled; categories <=33.33 / <=66.67 / above; five sensitivity scenarios.
