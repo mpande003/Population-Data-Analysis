@@ -50,7 +50,7 @@ def class_distribution(df: pd.DataFrame, low: float = 60.0, high: float = 75.0) 
 
 def available_features(df: pd.DataFrame, feature_set: str = "enhanced") -> list[str]:
     cands = BASE_FEATURES if feature_set == "base" else ENHANCED_FEATURES
-    feats = [f for f in cands if f in df and df[f].notna().any()]
+    feats = [f for f in cands if (f in df.columns) and bool(df[f].notna().any())]
     leak = FORBIDDEN.intersection(feats)
     assert not leak, f"Target leakage: {leak}"
     return feats
