@@ -18,3 +18,4 @@ except Exception as e:
     print("Error during PDF conversion:", e)
 finally:
     word.Quit()
+
